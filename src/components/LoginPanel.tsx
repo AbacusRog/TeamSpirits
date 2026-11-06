@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useAuth } from '../hooks/useAuth'
+import Turnstile from './Turnstile'
 
 export function LoginPanel({ onClose }: { onClose: () => void }) {
   const { signIn } = useAuth()
@@ -7,13 +8,16 @@ export function LoginPanel({ onClose }: { onClose: () => void }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  const [captchaReset, setCaptchaReset] = useState(0)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setBusy(true)
     setError(null)
-    const err = await signIn(email, password)
+    const err = await signIn(email, password, captchaToken)
     setBusy(false)
+    setCaptchaReset((n) => n + 1)
     if (err) {
       setError(err.message)
       return
@@ -43,11 +47,12 @@ export function LoginPanel({ onClose }: { onClose: () => void }) {
             <label className="field-label" htmlFor="password">Password</label>
             <input id="password" type="password" className="field-input" value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
+          <Turnstile onToken={setCaptchaToken} resetKey={captchaReset} />
           {error && <p className="text-sm text-redact">{error}</p>}
         </div>
         <div className="flex justify-end gap-2 border-t border-rule px-4 py-3 sm:px-6 sm:py-4">
           <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" className="btn-primary" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
+          <button type="submit" className="btn-primary" disabled={busy || !captchaToken}>{busy ? 'Signing in…' : 'Sign in'}</button>
         </div>
       </form>
     </div>
